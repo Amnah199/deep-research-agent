@@ -1,0 +1,11 @@
+services:
+  tavily:
+    image: supercorp/supergateway
+    ports: ["8106:8106"]
+    environment:
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+    entrypoint: /bin/sh -c
+    command: >
+      'test -z "$TAVILY_API_KEY" &&
+         { echo "❌ TAVILY_API_KEY missing"; exit 1; };
+       exec supergateway --stdio "env TAVILY_API_KEY=${TAVILY_API_KEY} npx -y tavily-mcp@0.2.4" --port 8106'

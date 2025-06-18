@@ -5,23 +5,37 @@
 # Overview: This script runs a Haystack research agent that uses MCP tools to create comprehensive research reports.
 
 import pathlib
-
+import asyncio
 from haystack.components.agents import Agent
 from haystack.components.generators.chat import OpenAIChatGenerator
-from haystack.components.generators.utils import print_streaming_chunk
 from haystack.dataclasses import ChatMessage
 from haystack.tools import ComponentTool
+from haystack.components.generators.utils import print_streaming_chunk
 
 from haystack_integrations.components.connectors.langfuse.langfuse_connector import (
     LangfuseConnector,
 )
-from haystack_integrations.components.generators.amazon_bedrock import AmazonBedrockChatGenerator
 
 from haystack_integrations.tools.mcp.mcp_tool import SSEServerInfo
 from haystack_integrations.tools.mcp.mcp_toolset import MCPToolset
 
 
+# SPDX-FileCopyrightText: 2022-present deepset GmbH <info@deepset.ai>
+#
+# SPDX-License-Identifier: Apache-2.0
 
+import json
+
+from haystack.dataclasses import ChatMessage, StreamingChunk, ToolCall
+
+
+async def print_streaming_chunk_async(chunk: StreamingChunk) -> None:
+    """
+    Default callback function for streaming responses.
+
+    Prints the tokens of the first completion to stdout as soon as they are received
+    """
+    print(chunk.content, flush=True, end="")
 
 def load_generate_queries_system_message():
     """Load the generate queries system message from the external file."""
@@ -63,7 +77,7 @@ def load_research_agent_system_message():
         return f.read()
 
 
-def main():
+async def main():
     # Use streaming to print the response
     use_streaming = True
 
@@ -172,7 +186,7 @@ def main():
             research_reflection_tool,
             finalize_report_tool
         ],
-        streaming_callback=print_streaming_chunk if use_streaming else None,
+        streaming_callback=print_streaming_chunk_async if use_streaming else None,
         state_schema={
             "web_search_results": {"type": list[ChatMessage]}
         }
@@ -180,7 +194,7 @@ def main():
 
     try:
         print("Running deep research agent...")
-        response = research_agent.run(
+        response = await research_agent.run_async(
             messages=[
                 ChatMessage.from_user(text="What's mechanistic interpretability and why is it important in LLMs?")
             ]
@@ -193,4 +207,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    asyncio.run(main()) 
